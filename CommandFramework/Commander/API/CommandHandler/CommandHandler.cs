@@ -29,7 +29,7 @@
         ///     LoadModules must be ran before use.
         /// </remarks>
         /// <exception cref="NullReferenceException">
-        ///     Modules was not loaded before use. Please run <see cref="LoadModules(string)"/> before calling this.
+        ///     Modules was not loaded before use. Please run <see cref="LoadModulesFromFile(string)"/> before calling this.
         /// </exception>
         public IEnumerable<Command> Modules { get; set; }
 
@@ -41,7 +41,7 @@
         /// <returns>
         ///     An IEnumerable of Tuples containing the command, case sensitive bool, and type needed to create an instance.
         /// </returns>
-        public IEnumerable<Command> LoadModules(string filePath)
+        public IEnumerable<Command> LoadModulesFromFile(string filePath)
         {
             this.Logger.LogInformation("Register Hit");
             this.Logger.LogInformation("Register File Path: " + filePath);

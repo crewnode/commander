@@ -125,7 +125,7 @@ namespace ExamplePlugin
 
             var handler = new CommandHandler(this.commandHandler);
 
-            handler.Modules = handler.LoadModules(dllFiles[0]);
+            handler.Modules = handler.LoadModulesFromFile(dllFiles[0]);
 
             this.unregister = new[]
             {
