@@ -14,11 +14,6 @@ namespace CommandFramework.Managers.Models
     public enum ShowStates
     {
         /// <summary>
-        ///     The undefined value, indicates the enum hasn't been set yet.
-        /// </summary>
-        Undefined,
-
-        /// <summary>
         ///     Log to server.
         /// </summary>
         Server,

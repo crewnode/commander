@@ -1,33 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿// <copyright file="CommandHandlerUtil.cs" company="ArcticWalrus">
+// Copyright (c) ArcticWalrus. All rights reserved.
+// </copyright>
 
-namespace CommandFramework.API.CommandHandler
 namespace CommandFramework.API.CommandHandler
 {
-    class CommandHandlerUtil
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Reflection;
-    using CommandFramework.API.Attributes;
+    using System.IO;
     using CommandFramework.Managers.Models;
 
+    /// <summary>
+    ///     The utilities for <see cref="CommandHandler"/>.
+    /// </summary>
     public static class CommandHandlerUtil
     {
-        public static IEnumerable<Command> LoadModulesFromFile(string filePath, params object[] commandArgs)
+        public static string[] GetDllPaths(string path, bool searchRecursively)
         {
-            throw new NotImplementedException();
-        }
-
-        public static Command LoadModule(Command command)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static IEnumerable<Command> LoadModules(Command[] comands)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                return Directory.GetFiles(path, "*.dll", searchRecursively ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+            }
+            catch (Exception e)
+            {
+                Console.Write(e);
+                return new string[0];
+            }
         }
     }
 }

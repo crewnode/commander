@@ -12,7 +12,7 @@ namespace CommandFramework.Managers.Models
     /// <remarks>
     ///     Implements <see cref="IArgumentGenerator"/>.
     /// </remarks>
-    public class ArgumentGenerator : IArgumentGenerator
+    public class ArgumentGenerator : IArguments
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ArgumentGenerator"/> class.

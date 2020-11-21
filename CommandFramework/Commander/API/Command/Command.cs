@@ -55,7 +55,7 @@ namespace CommandFramework.Managers.Models
         /// <param name="message">The message actually sent.</param>
         /// <param name="playerChatEvent">The player chat event.</param>
         /// <returns>A IEnumerable of ArgumentGenerators.</returns>
-        public virtual IEnumerable<ArgumentGenerator> Arguments(string message, IPlayerChatEvent playerChatEvent) => new[] { this.Args };
+        public virtual IEnumerable<ArgumentGenerator> Arguments(IPlayerChatEvent playerChatEvent) => new[] { this.Args };
 
         /// <summary>
         ///     Runs before the <see cref="Arguments(string, IPlayerChatEvent)"/> gets called.
@@ -65,7 +65,7 @@ namespace CommandFramework.Managers.Models
         /// </remarks>
         /// <param name="playerChatEvent">The player chat event.</param>
         /// <returns>Returns an updated message or the same message.</returns>
-        public virtual string Before(IPlayerChatEvent playerChatEvent) => playerChatEvent.Message;
+        public virtual void Before(IPlayerChatEvent playerChatEvent) { }
 
         /// <summary>
         ///     Executes after gathering the arguments.

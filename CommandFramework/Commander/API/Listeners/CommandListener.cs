@@ -35,6 +35,8 @@ namespace ExamplePlugin
         public void OnPlayerChat(IPlayerChatEvent eventInfo)
         {
             this.Handler.RunOnPlayerChatEvent(eventInfo);
+
+            // Check the modules and run code.
         }
 
         /// <summary>
