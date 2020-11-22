@@ -7,7 +7,7 @@ namespace CommandFramework.Managers.Models
     using CommandFramework.API.Enums;
 
     /// <summary>
-    ///     Holds all the data that pertains to the <see cref="IArgumentGenerator"/> class.
+    ///     Holds all the data that pertains to the <see cref="IArguments"/> class.
     /// </summary>
     public interface IArguments
     {
@@ -29,12 +29,12 @@ namespace CommandFramework.Managers.Models
         /// <summary>
         ///     Gets or Sets the amount of phrases to match for rest, separate, content, or text match.
         /// </summary>
-        public int Limit { get; set; }
+        public int? Limit { get; set; }
 
         /// <summary>
         ///     Gets or sets argument matcher.
         /// </summary>
-        public ArgumentMatch Match { get; set; }
+        public ArgumentMatch? Match { get; set; }
 
         /// <summary>
         ///     Gets or Sets the default <see cref="PromptOptions"/>.
@@ -47,6 +47,6 @@ namespace CommandFramework.Managers.Models
         /// <remarks>
         ///     Setting an auto type will work with validate. Multiple autotypes are allowed.
         /// </remarks>
-        public AutoTypes AutoType { get; set; }
+        public AutoTypes? AutoType { get; set; }
     }
 }

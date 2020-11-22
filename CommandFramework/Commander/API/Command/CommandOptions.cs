@@ -5,6 +5,7 @@
 namespace CommandFramework.Managers.Models
 {
     using System;
+    using System.Collections.Generic;
     using Impostor.Api.Events.Player;
 
     /// <summary>
@@ -44,9 +45,9 @@ namespace CommandFramework.Managers.Models
         }
 
         /// <inheritdoc/>
-        public string[] PrefixSA
+        public HashSet<string> PrefixSA
         {
-            get => this.Prefix is string[] ? this.Prefix as string[] : null;
+            get => this.Prefix is HashSet<string> ? this.Prefix as HashSet<string> : null;
             set => this.Prefix = value;
         }
 
@@ -58,9 +59,9 @@ namespace CommandFramework.Managers.Models
         }
 
         /// <inheritdoc/>
-        public Func<IPlayerChatEvent, string[]> PrefixFSA
+        public Func<IPlayerChatEvent, HashSet<string>> PrefixFSA
         {
-            get => this.Prefix is Func<string, string[]> ? this.Prefix as Func<IPlayerChatEvent, string[]> : null;
+            get => this.Prefix is Func<string, HashSet<string>> ? this.Prefix as Func<IPlayerChatEvent, HashSet<string>> : null;
             set => this.Prefix = value;
         }
 
@@ -73,10 +74,10 @@ namespace CommandFramework.Managers.Models
         public PromptOptions PromptOpts { get; set; }
 
         /// <inheritdoc/>
-        public ShowStates ShowChatTo { get; set; } = 0;
+        public ShowStates? ShowChatTo { get; set; } = 0;
 
         /// <inheritdoc/>
-        public ShowStates ShowResponseTo { get; set; } = 0;
+        public ShowStates? ShowResponseTo { get; set; } = 0;
 
         // Cooldown options
 
@@ -143,12 +144,12 @@ namespace CommandFramework.Managers.Models
                 this.PromptOpts = commandOptions.PromptOpts;
             }
 
-            if (!commandOptions.ShowChatTo.HasFlag(ShowStates.Undefined))
+            if (commandOptions.ShowChatTo != null)
             {
                 this.ShowChatTo = commandOptions.ShowChatTo;
             }
 
-            if (!commandOptions.ShowChatTo.HasFlag(ShowStates.Undefined))
+            if (commandOptions.ShowChatTo != null)
             {
                 this.ShowResponseTo = commandOptions.ShowResponseTo;
             }

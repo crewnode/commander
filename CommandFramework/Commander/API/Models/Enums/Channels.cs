@@ -10,11 +10,6 @@ namespace CommandFramework.Managers.Models
     public enum Channels
     {
         /// <summary>
-        ///     The undefined value, indicates the enum hasn't been set yet.
-        /// </summary>
-        Undefined,
-
-        /// <summary>
         ///     Allow command on ship.
         /// </summary>
         Ship,

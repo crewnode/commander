@@ -11,7 +11,5 @@ namespace CommandFramework.API.Enums
     /// </remarks>
     public enum ArgumentMatch
     {
-        /// <inheritdoc/>
-        Undefined,
     }
 }

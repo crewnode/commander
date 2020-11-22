@@ -33,19 +33,19 @@ namespace CommandFramework.Managers.Models
         public string Timeout { get; set; }
 
         /// <inheritdoc/>
-        public int Retries { get; set; }
+        public int? Retries { get; set; }
 
         /// <inheritdoc/>
-        public long Time { get; set; }
+        public long? Time { get; set; }
 
         /// <inheritdoc/>
         public string Stopword { get; set; }
 
         /// <inheritdoc/>
-        public bool Infinite { get; set; }
+        public bool? Infinite { get; set; }
 
         /// <inheritdoc/>
-        public int Limit { get; set; }
+        public int? Limit { get; set; }
 
         // Parsing unsuccessful
 

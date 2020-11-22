@@ -5,6 +5,7 @@
 namespace CommandFramework.Managers.Models
 {
     using System;
+    using System.Collections.Generic;
     using Impostor.Api.Events.Player;
 
     /// <summary>
@@ -34,7 +35,7 @@ namespace CommandFramework.Managers.Models
         /// <summary>
         ///     Gets or sets the prefix to a string array.
         /// </summary>
-        public string[] PrefixSA { get; set; }
+        public HashSet<string> PrefixSA { get; set; }
 
         /// <summary>
         ///     Gets or sets the prefix to a function that will return a prefix.
@@ -56,7 +57,7 @@ namespace CommandFramework.Managers.Models
         /// <returns>
         ///     An array of allowed prefixes in the form of a string.
         /// </returns>
-        public Func<IPlayerChatEvent, string[]> PrefixFSA { get; set; }
+        public Func<IPlayerChatEvent, HashSet<string>> PrefixFSA { get; set; }
 
         // Prompt options
 
@@ -68,12 +69,12 @@ namespace CommandFramework.Managers.Models
         /// <summary>
         ///     Gets or Sets the allowed entities to show the input command to.
         /// </summary>
-        public ShowStates ShowChatTo { get; set; }
+        public ShowStates? ShowChatTo { get; set; }
 
         /// <summary>
         ///     Gets or Sets the allowed entities to show the output responding to.
         /// </summary>
-        public ShowStates ShowResponseTo { get; set; }
+        public ShowStates? ShowResponseTo { get; set; }
 
         // Cooldown options
 

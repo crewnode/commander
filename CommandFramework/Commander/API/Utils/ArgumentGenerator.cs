@@ -35,15 +35,15 @@ namespace CommandFramework.Managers.Models
         public string Default { get; set; }
 
         /// <inheritdoc/>
-        public int Limit { get; set; }
+        public int? Limit { get; set; }
 
         /// <inheritdoc/>
-        public ArgumentMatch Match { get; set; }
+        public ArgumentMatch? Match { get; set; }
 
         /// <inheritdoc/>
         public PromptOptions Prompt { get; set; }
 
         /// <inheritdoc/>
-        public AutoTypes AutoType { get; set; }
+        public AutoTypes? AutoType { get; set; }
     }
 }

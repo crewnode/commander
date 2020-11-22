@@ -32,6 +32,7 @@ namespace ExamplePlugin
         /// Runs on the player chat.
         /// </summary>
         /// <param name="eventInfo"> The data being passed from the chat event.</param>
+        [EventListener]
         public void OnPlayerChat(IPlayerChatEvent eventInfo)
         {
             this.Handler.RunOnPlayerChatEvent(eventInfo);

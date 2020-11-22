@@ -44,12 +44,12 @@ namespace CommandFramework.Managers.Models
         /// <summary>
         ///      Gets or sets amount of retries allowed.
         /// </summary>
-        public int Retries { get; set; }
+        public int? Retries { get; set; }
 
         /// <summary>
         ///     Gets or sets time to wait for input.
         /// </summary>
-        public long Time { get; set; }
+        public long? Time { get; set; }
 
         /// <summary>
         ///     Gets or sets word to use for ending infinite prompts.
@@ -62,12 +62,12 @@ namespace CommandFramework.Managers.Models
         /// <remarks>
         ///     While true prompts forever until the stop word, cancel word, time limit, or retry limit. Note that the retry count resets back to one on each valid entry. The final evaluated argument will be an array of the inputs.
         /// </remarks>
-        public bool Infinite { get; set; }
+        public bool? Infinite { get; set; }
 
         /// <summary>
         ///     Gets or sets amount of inputs allowed for an infinite prompt before finishing.
         /// </summary>
-        public int Limit { get; set; }
+        public int? Limit { get; set; }
 
         // Parsing unsuccessful
 

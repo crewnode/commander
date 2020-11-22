@@ -7,6 +7,7 @@ namespace CommandFramework.Managers.Models
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Reflection;
     using System.Reflection.Metadata.Ecma335;
     using CommandFramework.API.Attributes;
@@ -67,6 +68,7 @@ namespace CommandFramework.Managers.Models
         public CommandHandler(ICommandHandlerOptions options)
         {
             this.Set(options);
+            modules = new List<Command>();
         }
 
         /// <summary>
@@ -82,10 +84,11 @@ namespace CommandFramework.Managers.Models
 
             this.Before(eventInfo.Message);
             var associatedCommand = this.FindCommand(eventInfo);
-            associatedCommand.Before(eventInfo);
-            string[] splitCommand = this.SplitMessage(associatedCommand, eventInfo.Message);
+            Logger.LogInformation(associatedCommand?.MainCommand);
+            //associatedCommand.Before(eventInfo);
+            //string[] splitCommand = this.SplitMessage(associatedCommand, eventInfo.Message);
 
-            if (splitCommand.Length <= 0)
+            //if (splitCommand.Length <= 0)
             {
                 return;
             }
@@ -108,33 +111,98 @@ namespace CommandFramework.Managers.Models
                 return null;
             }
 
-            foreach(Command command in this.modules)
+            foreach (Command command in this.modules)
             {
-                var prefix = CommandHandler.GetPrefix(command, playerChatEvent) ?? CommandHandler.GetPrefix(this, playerChatEvent) ?? CommandHandler.GetPrefix(CommandHandler.Defaults, playerChatEvent);
+                var message = this.SplitMessage(command, playerChatEvent.Message);
+
+                if (message.Length <= 0)
+                {
+                    continue;
+                }
+
+                var prefix = GetPrefix(command, playerChatEvent)
+                    ?? GetPrefix(this, playerChatEvent)
+                    ?? GetPrefix(Defaults, playerChatEvent);
+
+                prefix = new HashSet<string>(prefix.Where(ValidPrefix));
+
+                if (prefix.Count <= 0)
+                {
+                    continue;
+                }
+
+                prefix = new HashSet<string>(prefix.Where((string str) => message[0].StartsWith(str)));
+
+                if (prefix.Count <= 0)
+                {
+                    continue;
+                }
+
+                List<(string Alias, bool CaseSens)> aliases = this.GetAliases(command).ToList();
+
+                if (aliases.Count <= 0)
+                {
+                    continue;
+                }
+
+                List<(string Alias, bool CaseSens)> combined = new List<(string Alias, bool CaseSens)>();
+
+                foreach (var p in prefix)
+                {
+                    foreach (var (alias, caseSens) in aliases)
+                    {
+                        combined.Add((p + alias, caseSens));
+                    }
+                }
+
+                if (combined.Any((tupl) => (tupl.CaseSens && message[0] == tupl.Alias) || message[0].ToLower() == tupl.Alias.ToLower()))
+                {
+                    return command;
+                }
             }
+
+            return null;
         }
 
-        private static bool validPrefix(string[] prefixs) => prefixs.All((string str) => !string.IsNullOrWhiteSpace(str));
-        private static bool validPrefix(string prefix) => string.IsNullOrWhiteSpace(prefix);
+        private (string Alias, bool CaseSensitive)[] GetAliases(Command command)
+        {
+            return command.Aliases == null
+                ? new[]
+                {
+                    (command.MainCommand, command.CaseSensitive
+                        ?? this.CaseSensitive
+                        ?? Defaults.CaseSensitive
+                        ?? false),
+                }
+                : command.Aliases.Concat(new[]
+                {
+                    (command.MainCommand, command.CaseSensitive
+                        ?? this.CaseSensitive
+                        ?? Defaults.CaseSensitive
+                        ?? false),
+                }).ToArray();
+        }
 
-        private static string[] GetPrefix(IOptions options, IPlayerChatEvent chatEvent)
+        private static bool ValidPrefix(string prefix) => !string.IsNullOrWhiteSpace(prefix);
+
+        private static HashSet<string> GetPrefix(IOptions options, IPlayerChatEvent chatEvent)
         {
             if (!string.IsNullOrWhiteSpace(options.PrefixS))
             {
-                return new[] { options.PrefixS };
+                return new HashSet<string>() { options.PrefixS };
             }
 
-            if (options.PrefixSA != null && options.PrefixSA.Length > 0)
+            if (options.PrefixSA != null && options.PrefixSA.Count > 0)
             {
                 return options.PrefixSA;
             }
 
             if (options.PrefixFS != null && options.PrefixFS(chatEvent) is string tempStr)
             {
-                return new[] { tempStr };
+                return new HashSet<string>() { tempStr };
             }
 
-            if (options.PrefixFSA != null && options.PrefixFSA(chatEvent) is string[] tempStrArray)
+            if (options.PrefixFSA != null && options.PrefixFSA(chatEvent) is HashSet<string> tempStrArray)
             {
                 return tempStrArray;
             }
@@ -156,12 +224,12 @@ namespace CommandFramework.Managers.Models
 
             foreach (var type in assembly.GetTypes())
             {
-                if (type.BaseType.Name != typeof(Command).Name)
+                if (type.BaseType.Name != nameof(Command))
                 {
                     continue;
                 }
 
-                var possibleAttributes = type.GetCustomAttributes().Where((Attribute t) => t.GetType().Name == typeof(CommandAttribute).Name);
+                var possibleAttributes = type.GetCustomAttributes().Where((Attribute t) => t.GetType().Name == nameof(API.Attributes.CommandAttribute));
 
                 if (possibleAttributes.Count() > 0)
                 {
@@ -173,7 +241,23 @@ namespace CommandFramework.Managers.Models
                     continue;
                 }
 
-                this.modules.Add((Command)Activator.CreateInstance(type: type, args: new[] { this }));
+                var ctors = type.GetConstructors();
+
+                if (ctors.Length <= 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    this.modules.Add((Command)Activator.CreateInstance(type: type, args: new[] { this }));
+                }
+                catch
+                {
+                    this.Logger.LogInformation("Invalid DLL, skipping over.");
+                }
+
+                //this.modules.Add(wee);
             }
         }
 

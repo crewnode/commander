@@ -9,9 +9,5 @@ namespace CommandFramework.API.Enums
     /// </summary>
     public enum AutoTypes
     {
-        /// <summary>
-        ///     The undefined value, indicates the enum hasn't been set yet.
-        /// </summary>
-        Undefined,
     }
 }

@@ -5,6 +5,7 @@
 namespace CommandFramework.Managers.Models
 {
     using System;
+    using System.Collections.Generic;
     using System.Runtime.InteropServices.ComTypes;
     using ExamplePlugin;
     using Impostor.Api.Events.Player;
@@ -62,9 +63,9 @@ namespace CommandFramework.Managers.Models
         }
 
         /// <inheritdoc/>
-        public string[] PrefixSA
+        public HashSet<string> PrefixSA
         {
-            get => this.Prefix is string[] ? this.Prefix as string[] : null;
+            get => this.Prefix is HashSet<string> ? this.Prefix as HashSet<string> : null;
             set => this.Prefix = value;
         }
 
@@ -76,9 +77,9 @@ namespace CommandFramework.Managers.Models
         }
 
         /// <inheritdoc/>
-        public Func<IPlayerChatEvent, string[]> PrefixFSA
+        public Func<IPlayerChatEvent, HashSet<string>> PrefixFSA
         {
-            get => this.Prefix is Func<string, string[]> ? this.Prefix as Func<IPlayerChatEvent, string[]> : null;
+            get => this.Prefix is Func<string, HashSet<string>> ? this.Prefix as Func<IPlayerChatEvent, HashSet<string>> : null;
             set => this.Prefix = value;
         }
 
@@ -88,10 +89,10 @@ namespace CommandFramework.Managers.Models
         public PromptOptions PromptOpts { get; set; }
 
         /// <inheritdoc/>
-        public ShowStates ShowChatTo { get; set; }
+        public ShowStates? ShowChatTo { get; set; }
 
         /// <inheritdoc/>
-        public ShowStates ShowResponseTo { get; set; }
+        public ShowStates? ShowResponseTo { get; set; }
 
         // Cooldown options
 
@@ -191,12 +192,12 @@ namespace CommandFramework.Managers.Models
                 this.PromptOpts = commandHandlerOptions.PromptOpts;
             }
 
-            if (!commandHandlerOptions.ShowChatTo.HasFlag(ShowStates.Undefined))
+            if (commandHandlerOptions.ShowChatTo != null)
             {
                 this.ShowChatTo = commandHandlerOptions.ShowChatTo;
             }
 
-            if (!commandHandlerOptions.ShowResponseTo.HasFlag(ShowStates.Undefined))
+            if (commandHandlerOptions.ShowResponseTo != null)
             {
                 this.ShowResponseTo = commandHandlerOptions.ShowResponseTo;
             }
