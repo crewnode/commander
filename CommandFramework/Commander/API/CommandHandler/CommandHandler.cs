@@ -38,13 +38,6 @@ namespace CommandFramework.Managers.Models
         /// </remarks>
         public List<Command> Modules { get; private set; }
 
-        /// <summary>
-        ///     Gets all the duplicate aliases.
-        /// </summary>
-        public HashSet<(string Alias, bool CaseSensitive)> DuplicateAliases { get; private set; }
-
-
-
         /// <inheritdoc/>
         public void LoadModulesFromDLL(string filePath)
         {
@@ -96,7 +89,7 @@ namespace CommandFramework.Managers.Models
         /// <inheritdoc/>
         public void LoadModules(Command[] commands) { this.Modules.AddRange(commands); }
 
-        // Validators.
+        // Data conversions.
 
         /// <inheritdoc/>
         public (string Alias, bool CaseSensitive)[] GetCombinedAliases(Command command)
@@ -121,6 +114,19 @@ namespace CommandFramework.Managers.Models
         /// <inheritdoc/>
         public string[] SplitMessage(Command associatedCommand, string message) => message.Split(associatedCommand.SplitAt ?? this.SplitAt ?? DefaultHandler.SplitAt);
 
+        /// <inheritdoc/>
+        public (string Alias, bool CaseSensitive)[] GetDuplicatedAliases()
+        {
+            var aliases = new List<(string Alias, bool CaseSensitive)>();
+
+            this.Modules.ForEach((Command command) => aliases.AddRange(this.GetCombinedAliases(command).ToHashSet()));
+
+            return aliases.GroupBy(x => x)
+               .Where(g => g.Count() > 1)
+               .Select(y => y.Key)
+               .ToArray();
+        }
+
         // Class events.
 
         /// <inheritdoc/>
@@ -143,7 +149,7 @@ namespace CommandFramework.Managers.Models
                 return;
             }
 
-            var associatedCommand = this.FindCommand(eventInfo, this.DuplicateAliases.ToArray());
+            var associatedCommand = this.FindCommand(eventInfo);
 
             if (associatedCommand == null)
             {
@@ -158,7 +164,13 @@ namespace CommandFramework.Managers.Models
                 return;
             }
 
-            associatedCommand.GetArgs(eventInfo);
+            var phrases = splitCommand.AsEnumerable().GetEnumerator();
+            var commandArgs = associatedCommand.GetArgs(eventInfo).GetEnumerator();
+
+            while (phrases.MoveNext() & commandArgs.MoveNext())
+            {
+                commandArgs.Current.
+            }
         }
 
         // Command handling here.
@@ -214,6 +226,10 @@ namespace CommandFramework.Managers.Models
                         {
                             combined.Add((p + alias, caseSens));
                         }
+                        else
+                        {
+                            this.Logger.LogError($"The {(caseSens ? string.Empty : "non")} case sensitive Command alias {p + alias} has been disabled due to conflicts with other commands.");
+                        }
                     }
                 }
 
@@ -224,18 +240,6 @@ namespace CommandFramework.Managers.Models
             }
 
             return null;
-        }
-
-        public (string Alias, bool CaseSensitive)[] GetDuplicatedAliases()
-        {
-            var aliases = new List<(string Alias, bool CaseSensitive)>();
-
-            this.Modules.ForEach((Command command) => aliases.AddRange(this.GetCombinedAliases(command).ToHashSet()));
-
-            return aliases.GroupBy(x => x)
-               .Where(g => g.Count() > 1)
-               .Select(y => y.Key)
-               .ToArray();
         }
     }
 }

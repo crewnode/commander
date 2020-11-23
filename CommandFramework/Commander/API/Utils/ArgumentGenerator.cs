@@ -21,12 +21,12 @@ namespace CommandFramework.Managers.Models
         /// <param name="handler"> The command handler attached to the Command.</param>
         public ArgumentGenerator(string comamnd, HandlerOptions handler)
         {
-            this.Comamnd = comamnd;
+            this.Command = comamnd;
             this.Handler = handler;
         }
 
         /// <inheritdoc/>
-        public string Comamnd { get; }
+        public string Command { get; }
 
         /// <inheritdoc/>
         public HandlerOptions Handler { get; }

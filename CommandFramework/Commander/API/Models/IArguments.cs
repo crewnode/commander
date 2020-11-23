@@ -14,7 +14,7 @@ namespace CommandFramework.Managers.Models
         /// <summary>
         ///     Gets the command this argument belongs to.
         /// </summary>
-        public string Comamnd { get; }
+        public string Command { get; }
 
         /// <summary>
         ///     Gets the command handler.
