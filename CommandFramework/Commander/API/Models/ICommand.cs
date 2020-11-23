@@ -8,9 +8,9 @@ namespace CommandFramework.Managers.Models
     using Impostor.Api.Events.Player;
 
     /// <summary>
-    /// Holds the base methods and others required to be a Command
+    ///     Holds the base methods and others required to be a Command.
     /// </summary>
-    internal interface ICommand
+    public interface ICommand
     {
         // Command Specific Data
 
@@ -28,10 +28,10 @@ namespace CommandFramework.Managers.Models
         ///     Gets the actual phrase arguments.
         /// </summary>
         /// <remarks>
-        ///     Sees if the args are set in two places, if they are takes the <see cref="Arguments(IPlayerChatEvent)"/>.
+        ///     Sees if the args are set in two places, if they are takes the <see cref="Arguments(IPlayerChatEvent)"/> over the <see cref="ICommandOptions.Args"/>.
         /// </remarks>
-        /// <param name="playerChatEvent"> The chat event needed to get the method <see cref="Arguments(IPlayerChatEvent)"/> over the <see cref="ICommandOptions.Args"/> args.</param>
-        /// <returns> Returns the actual phrase arguments.</returns>
+        /// <param name="playerChatEvent"> The chat event needed to get the method <see cref="Arguments(IPlayerChatEvent)"/>.</param>
+        /// <returns> Returns <see cref="ICommandOptions.Args"/> if <see cref="Arguments(IPlayerChatEvent)"/> is null else returns <see cref="ICommandOptions.Args"/>. If both are null returns null.</returns>
         public IEnumerable<ArgumentGenerator> GetArgs(IPlayerChatEvent playerChatEvent);
 
         // Command Specific Methods.

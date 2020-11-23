@@ -10,12 +10,12 @@ namespace CommandFramework.Managers.Models
     ///     Represents an argument for a command.
     /// </summary>
     /// <remarks>
-    ///     Implements <see cref="IArgumentGenerator"/>.
+    ///     Implements <see cref="IArguments"/>.
     /// </remarks>
     public class ArgumentGenerator : IArguments
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ArgumentGenerator"/> class.
+        ///     Initializes a new instance of the <see cref="ArgumentGenerator"/> class.
         /// </summary>
         /// <param name="comamnd"> The main command alias.</param>
         /// <param name="handler"> The command handler attached to the Command.</param>

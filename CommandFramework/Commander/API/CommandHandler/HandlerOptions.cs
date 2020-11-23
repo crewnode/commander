@@ -1,4 +1,4 @@
-﻿// <copyright file="CommandHandler.cs" company="ArcticWalrus">
+﻿// <copyright file="HandlerOptions.cs" company="ArcticWalrus">
 // Copyright (c) ArcticWalrus. All rights reserved.
 // </copyright>
 
@@ -228,6 +228,6 @@ namespace CommandFramework.Managers.Models
         /// </returns>
         public virtual ICommandHandlerOptions Get() => this;
 
-        // public Func<IPlayerChatEvent, bool> IgnorePermissions { get; set; } 
+        // public Func<IPlayerChatEvent, bool> IgnorePermissions { get; set; }
     }
 }

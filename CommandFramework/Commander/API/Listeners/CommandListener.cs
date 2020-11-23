@@ -18,7 +18,7 @@ namespace ExamplePlugin
     public class CommandListener : IEventListener
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="CommandListener"/> class.
+        ///     Initializes a new instance of the <see cref="CommandListener"/> class.
         /// </summary>
         /// <param name="logger"> An instance of the servers <see cref="ILogger"/>. </param>
         /// <param name="commandHandler"> An instance of the commandHandler. </param>
@@ -26,18 +26,6 @@ namespace ExamplePlugin
         {
             this.Logger = logger;
             this.Handler = commandHandler;
-        }
-
-        /// <summary>
-        /// Runs on the player chat.
-        /// </summary>
-        /// <param name="eventInfo"> The data being passed from the chat event.</param>
-        [EventListener]
-        public void OnPlayerChat(IPlayerChatEvent eventInfo)
-        {
-            this.Handler.RunOnPlayerChatEvent(eventInfo);
-
-            // Check the modules and run code.
         }
 
         /// <summary>
@@ -52,5 +40,17 @@ namespace ExamplePlugin
         ///     Used to log any messages to the server console.
         /// </remarks>
         public ILogger<ExamplePlugin> Logger { get; }
+
+        /// <summary>
+        ///     Runs on the player chat.
+        /// </summary>
+        /// <param name="eventInfo"> The data being passed from the chat event.</param>
+        [EventListener]
+        public void OnPlayerChat(IPlayerChatEvent eventInfo)
+        {
+            this.Handler.Run(eventInfo);
+
+            // Check the modules and run code.
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace CommandFramework.Managers.Models
     using static CommandFramework.API.CommandHandler.CommandHandlerUtil;
 
     /// <summary>
-    /// Command Handler, holds some command settings that will apply to every command.
+    ///     Command Handler, holds some command settings that will apply to every command.
     /// </summary>
     public class CommandHandler : HandlerOptions, ICommandHandler
     {
@@ -28,6 +28,8 @@ namespace CommandFramework.Managers.Models
             this.Modules = new List<Command>();
         }
 
+        // Module loaders.
+
         /// <summary>
         ///     Gets the command modules.
         /// </summary>
@@ -37,9 +39,101 @@ namespace CommandFramework.Managers.Models
         public List<Command> Modules { get; private set; }
 
         /// <summary>
-        /// The run on player event.
+        ///     Gets all the duplicate aliases.
         /// </summary>
-        /// <param name="eventInfo"> The event information.</param>
+        public HashSet<(string Alias, bool CaseSensitive)> DuplicateAliases { get; private set; }
+
+
+
+        /// <inheritdoc/>
+        public void LoadModulesFromDLL(string filePath)
+        {
+            var assembly = Assembly.LoadFrom(filePath);
+
+            foreach (var type in assembly.GetTypes())
+            {
+                if (type.BaseType.Name != nameof(Command))
+                {
+                    continue;
+                }
+
+                var possibleAttributes = type.GetCustomAttributes().Where((Attribute t) => t.GetType().Name == nameof(API.Attributes.CommandAttribute));
+
+                if (possibleAttributes.Count() > 0)
+                {
+                    this.Logger.LogInformation($"{type.Name} was loaded.");
+                }
+                else
+                {
+                    this.Logger.LogInformation($"{type.Name} does not have a command attribute and wasn't loaded.");
+                    continue;
+                }
+
+                var ctors = type.GetConstructors();
+
+                if (ctors.Length <= 0)
+                {
+                    continue;
+                }
+
+                Command command;
+
+                try
+                {
+                    command = (Command)Activator.CreateInstance(type: type, args: new[] { this });
+                    this.Modules.Add(command);
+                }
+                catch
+                {
+                    this.Logger.LogInformation("Invalid DLL, skipping over.");
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void LoadModule(Command command) { this.Modules.Add(command); }
+
+        /// <inheritdoc/>
+        public void LoadModules(Command[] commands) { this.Modules.AddRange(commands); }
+
+        // Validators.
+
+        /// <inheritdoc/>
+        public (string Alias, bool CaseSensitive)[] GetCombinedAliases(Command command)
+        {
+            return command.Aliases == null
+                ? new[]
+                {
+                    (command.MainCommand, command.CaseSensitive
+                        ?? this.CaseSensitive
+                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
+                        ?? false),
+                }
+                : command.Aliases.Concat(new[]
+                {
+                    (command.MainCommand, command.CaseSensitive
+                        ?? this.CaseSensitive
+                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
+                        ?? false),
+                }).ToArray();
+        }
+
+        /// <inheritdoc/>
+        public string[] SplitMessage(Command associatedCommand, string message) => message.Split(associatedCommand.SplitAt ?? this.SplitAt ?? DefaultHandler.SplitAt);
+
+        // Class events.
+
+        /// <inheritdoc/>
+        public virtual void Before(string message)
+        {
+        }
+
+        /// <inheritdoc/>
+        public virtual void After(string message)
+        {
+        }
+
+        /// <inheritdoc/>
         public void Run(IPlayerChatEvent eventInfo)
         {
             this.Before(eventInfo.Message);
@@ -49,7 +143,7 @@ namespace CommandFramework.Managers.Models
                 return;
             }
 
-            var associatedCommand = this.FindCommand(eventInfo);
+            var associatedCommand = this.FindCommand(eventInfo, this.DuplicateAliases.ToArray());
 
             if (associatedCommand == null)
             {
@@ -67,11 +161,10 @@ namespace CommandFramework.Managers.Models
             associatedCommand.GetArgs(eventInfo);
         }
 
+        // Command handling here.
+
         /// <inheritdoc/>
-        public string[] SplitMessage(Command associatedCommand, string message) => message.Split(associatedCommand.SplitAt ?? this.SplitAt ?? CommandHandlerUtil.DefaultHandler.SplitAt);
-        
-        /// <inheritdoc/>
-        public Command FindCommand(IPlayerChatEvent playerChatEvent, params (string Alias, bool CaseSens)[] exludedAliases)
+        public Command FindCommand(IPlayerChatEvent playerChatEvent, params (string Alias, bool CaseSensitive)[] exludedAliases)
         {
             if (this.Modules.Count <= 0)
             {
@@ -104,14 +197,14 @@ namespace CommandFramework.Managers.Models
                     continue;
                 }
 
-                List<(string Alias, bool CaseSens)> aliases = this.GetCombinedAliases(command).ToList();
+                List<(string Alias, bool CaseSensitive)> aliases = this.GetCombinedAliases(command).ToList();
 
                 if (aliases.Count <= 0)
                 {
                     continue;
                 }
 
-                List<(string Alias, bool CaseSens)> combined = new List<(string Alias, bool CaseSens)>();
+                List<(string Alias, bool CaseSensitive)> combined = new List<(string Alias, bool CaseSensitive)>();
 
                 foreach (var p in prefix)
                 {
@@ -124,7 +217,7 @@ namespace CommandFramework.Managers.Models
                     }
                 }
 
-                if (combined.Any((tupl) => (tupl.CaseSens && message[0] == tupl.Alias) || message[0].ToLower() == tupl.Alias.ToLower()))
+                if (combined.Any((tupl) => (tupl.CaseSensitive && message[0] == tupl.Alias) || message[0].ToLower() == tupl.Alias.ToLower()))
                 {
                     return command;
                 }
@@ -133,90 +226,16 @@ namespace CommandFramework.Managers.Models
             return null;
         }
 
-        /// <inheritdoc/>
-        public (string Alias, bool CaseSensitive)[] GetCombinedAliases(Command command)
+        public (string Alias, bool CaseSensitive)[] GetDuplicatedAliases()
         {
-            return command.Aliases == null
-                ? new[]
-                {
-                    (command.MainCommand, command.CaseSensitive
-                        ?? this.CaseSensitive
-                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
-                        ?? false),
-                }
-                : command.Aliases.Concat(new[]
-                {
-                    (command.MainCommand, command.CaseSensitive
-                        ?? this.CaseSensitive
-                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
-                        ?? false),
-                }).ToArray();
+            var aliases = new List<(string Alias, bool CaseSensitive)>();
+
+            this.Modules.ForEach((Command command) => aliases.AddRange(this.GetCombinedAliases(command).ToHashSet()));
+
+            return aliases.GroupBy(x => x)
+               .Where(g => g.Count() > 1)
+               .Select(y => y.Key)
+               .ToArray();
         }
-
-        // Class events.
-
-        /// <inheritdoc/>
-        public virtual void Before(string message)
-        {
-        }
-
-        /// <inheritdoc/>
-        public virtual void After(string message)
-        {
-        }
-
-        // Module loaders.
-
-        /// <inheritdoc/>
-        public void LoadModulesFromDLL(string filePath)
-        {
-            // this.Logger.LogInformation("Register Hit");
-            // this.Logger.LogInformation("Register File Path: " + filePath);
-            var assembly = Assembly.LoadFrom(filePath);
-
-            foreach (var type in assembly.GetTypes())
-            {
-                if (type.BaseType.Name != nameof(Command))
-                {
-                    continue;
-                }
-
-                var possibleAttributes = type.GetCustomAttributes().Where((Attribute t) => t.GetType().Name == nameof(API.Attributes.CommandAttribute));
-
-                if (possibleAttributes.Count() > 0)
-                {
-                    // this.Logger.LogInformation($"{type.Name} was loaded.");
-                }
-                else
-                {
-                    // this.Logger.LogInformation($"{type.Name} does not have a command attribute and wasn't loaded.");
-                    continue;
-                }
-
-                var ctors = type.GetConstructors();
-
-                if (ctors.Length <= 0)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    this.Modules.Add((Command)Activator.CreateInstance(type: type, args: new[] { this }));
-                }
-                catch
-                {
-                    this.Logger.LogInformation("Invalid DLL, skipping over.");
-                }
-
-                //this.modules.Add(wee);
-            }
-        }
-
-        /// <inheritdoc/>
-        public void LoadModule(Command command) => this.Modules.Add(command);
-
-        /// <inheritdoc/>
-        public void LoadModules(Command[] commands) => this.Modules.AddRange(commands);
     }
 }

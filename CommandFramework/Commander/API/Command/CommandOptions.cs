@@ -74,18 +74,18 @@ namespace CommandFramework.Managers.Models
         public PromptOptions PromptOpts { get; set; }
 
         /// <inheritdoc/>
-        public ShowStates? ShowChatTo { get; set; } = 0;
+        public ShowStates? ShowChatTo { get; set; }
 
         /// <inheritdoc/>
-        public ShowStates? ShowResponseTo { get; set; } = 0;
+        public ShowStates? ShowResponseTo { get; set; }
 
         // Cooldown options
 
         /// <inheritdoc/>
-        public long? IndividualCooldown { get; set; } = long.MinValue;
+        public long? IndividualCooldown { get; set; }
 
         /// <inheritdoc/>
-        public long? CommandCooldown { get; set; } = long.MinValue;
+        public long? CommandCooldown { get; set; }
 
         /// <inheritdoc/>
         public Func<IPlayerChatEvent, bool> IgnoreCooldown { get; set; }

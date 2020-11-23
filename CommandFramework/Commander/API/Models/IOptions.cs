@@ -16,7 +16,7 @@ namespace CommandFramework.Managers.Models
         // Command options
 
         /// <summary>
-        /// Gets or Sets a value indicating whether the main command name is case sensitive.
+        ///     Gets or Sets a value indicating whether the main command name is case sensitive.
         /// </summary>
         public bool? CaseSensitive { get; set; }
 

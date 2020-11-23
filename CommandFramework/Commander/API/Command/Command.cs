@@ -11,10 +11,10 @@ namespace CommandFramework.Managers.Models
     using Impostor.Api.Events.Player;
 
     /// <summary>
-    ///     Provides a base Command class to extend onto.
+    ///     Provides a base Command class to extend onto. Provides functionality to <see cref="ICommand"/> interface.
     /// </summary>
     /// <remarks>
-    ///     Extends <see cref="CommandOptions"/>.
+    ///     Extends <see cref="CommandOptions"/> and implements <see cref="ICommand"/>.
     /// </remarks>
     public class Command : CommandOptions, ICommand
     {
@@ -24,7 +24,7 @@ namespace CommandFramework.Managers.Models
         /// <param name="command"> The main command alias. </param>
         /// <param name="commandOptions">A instance of the <see cref="ICommandOptions"/> interface to set to.</param>
         /// <param name="handler"> A instance of the command handler that called the command. </param>
-        public Command(string command, ICommandOptions commandOptions, HandlerOptions handler)
+        public Command(string command, HandlerOptions handler, ICommandOptions commandOptions)
         {
             /*var subclassTypes = Assembly
                 .GetAssembly(typeof(Command))
@@ -36,26 +36,39 @@ namespace CommandFramework.Managers.Models
             this.Set(commandOptions);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Command"/> class.
+        /// </summary>
+        /// <param name="command"> The command must haves.</param>
+        /// <param name="commandOptions"> The command options.</param>
+        public Command(ICommand command, ICommandOptions commandOptions)
+        {
+            this.MainCommand = command.MainCommand;
+            this.Handler = command.Handler;
+            this.Set(commandOptions);
+        }
+
+        /// <inheritdoc/>
+        public HandlerOptions Handler { get; }
+
         /// <inheritdoc/>
         public string MainCommand { get; }
 
-        
-        public HandlerOptions Handler { get; private set; } // Not sure how to improve this sadly
+        /// <inheritdoc/>
+        public IEnumerable<ArgumentGenerator> GetArgs(IPlayerChatEvent playerChatEvent)
+            => this.Arguments(playerChatEvent) ?? (this.Args != null ? new[] { this.Args } : null);
 
-        
-        public virtual IEnumerable<ArgumentGenerator> Arguments(IPlayerChatEvent playerChatEvent) => new[] { this.Args };
+        /// <inheritdoc/>
+        public virtual IEnumerable<ArgumentGenerator> Arguments(IPlayerChatEvent playerChatEvent) => null;
 
-        
-        public virtual void Before(IPlayerChatEvent playerChatEvent) { }
-
-        
-        public virtual void Execute(IPlayerChatEvent playerChatEvent, object[] arguments)
+        /// <inheritdoc/>
+        public virtual void Before(IPlayerChatEvent playerChatEvent)
         {
-            return;
         }
 
-        // public event Func<object[], object[]> Arguments = args => args;
-        // public event Func<string, string> Before = str => str;
-        // public event Action<string, object[]> Execute;
+        /// <inheritdoc/>
+        public virtual void Execute(IPlayerChatEvent playerChatEvent, object[] arguments)
+        {
+        }
     }
 }
