@@ -7,60 +7,17 @@ namespace CommandFramework.Managers.Models
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Net;
     using System.Reflection;
-    using System.Reflection.Metadata.Ecma335;
-    using CommandFramework.API.Attributes;
+    using CommandFramework.API.CommandHandler;
     using Impostor.Api.Events.Player;
     using Microsoft.Extensions.Logging;
+    using static CommandFramework.API.CommandHandler.CommandHandlerUtil;
 
     /// <summary>
     /// Command Handler, holds some command settings that will apply to every command.
     /// </summary>
-    public class CommandHandler : HandlerOptions
+    public class CommandHandler : HandlerOptions, ICommandHandler
     {
-        private List<Command> modules;
-
-        private static readonly HandlerOptions Defaults = new HandlerOptions
-        {
-            CaseSensitive = false,
-            SplitAt = " ",
-
-            CommandMatching = (playerChat) => throw new NotImplementedException(),
-            PromptOpts = new PromptOptions()
-            {
-                Start = string.Empty,
-                Retry = string.Empty,
-
-                Ended = "You exceeded the maximum amount of tries, this command has now been cancelled...",
-                Cancel = "This command has been cancelled...",
-                Cancelword = "cancel",
-
-                Timeout = "You took too long, the command has now been cancelled...",
-                Retries = 3,
-                Time = 30000L,
-
-                Stopword = string.Empty,
-                Infinite = false,
-                Limit = 3,
-                Otherwise = string.Empty,
-            },
-
-            IndividualCooldown = 15000L,
-            CommandCooldown = 0L,
-            PublicCooldown = 0L,
-
-            ShowChatTo = ShowStates.Server | ShowStates.Host,
-            ShowResponseTo = ShowStates.Server | ShowStates.Self,
-
-            Directory = string.Empty,
-            SearchAllDirectories = false,
-
-            IgnoreCooldown = null,
-
-            PrefixS = "/",
-        };
-
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandHandler"/> class.
         /// </summary>
@@ -68,50 +25,60 @@ namespace CommandFramework.Managers.Models
         public CommandHandler(ICommandHandlerOptions options)
         {
             this.Set(options);
-            modules = new List<Command>();
+            this.Modules = new List<Command>();
         }
+
+        /// <summary>
+        ///     Gets the command modules.
+        /// </summary>
+        /// <remarks>
+        ///     This holds any modules loaded through <see cref="LoadModules(Command[])"/> or <see cref="LoadModulesFromDLL(string)"/>.
+        /// </remarks>
+        public List<Command> Modules { get; private set; }
 
         /// <summary>
         /// The run on player event.
         /// </summary>
         /// <param name="eventInfo"> The event information.</param>
-        public void RunOnPlayerChatEvent(IPlayerChatEvent eventInfo)
+        public void Run(IPlayerChatEvent eventInfo)
         {
-            if (string.IsNullOrWhiteSpace(eventInfo.Message) || this.modules.Count <= 0)
-            {
-                return;
-            }
-
             this.Before(eventInfo.Message);
-            var associatedCommand = this.FindCommand(eventInfo);
-            Logger.LogInformation(associatedCommand?.MainCommand);
-            //associatedCommand.Before(eventInfo);
-            //string[] splitCommand = this.SplitMessage(associatedCommand, eventInfo.Message);
 
-            //if (splitCommand.Length <= 0)
+            if (string.IsNullOrWhiteSpace(eventInfo.Message) || this.Modules.Count <= 0)
             {
                 return;
             }
 
-            var tempArgs = associatedCommand.Arguments(eventInfo);
+            var associatedCommand = this.FindCommand(eventInfo);
 
-            /*if (tempArgs != null)
+            if (associatedCommand == null)
             {
-                var tempEnumerator = tempArgs.GetEnumerator();
-                for(var i = 0; i < splitCommand.Length & tempEnumerator.)
-            }*/
+                return;
+            }
+
+            associatedCommand.Before(eventInfo);
+            string[] splitCommand = this.SplitMessage(associatedCommand, eventInfo.Message);
+
+            if (splitCommand.Length <= 0)
+            {
+                return;
+            }
+
+            associatedCommand.GetArgs(eventInfo);
         }
 
-        private string[] SplitMessage(Command associatedCommand, string message) => message.Split(associatedCommand.SplitAt ?? this.SplitAt ?? CommandHandler.Defaults.SplitAt);
-
-        private Command FindCommand(IPlayerChatEvent playerChatEvent)
+        /// <inheritdoc/>
+        public string[] SplitMessage(Command associatedCommand, string message) => message.Split(associatedCommand.SplitAt ?? this.SplitAt ?? CommandHandlerUtil.DefaultHandler.SplitAt);
+        
+        /// <inheritdoc/>
+        public Command FindCommand(IPlayerChatEvent playerChatEvent, params (string Alias, bool CaseSens)[] exludedAliases)
         {
-            if (this.modules.Count <= 0)
+            if (this.Modules.Count <= 0)
             {
                 return null;
             }
 
-            foreach (Command command in this.modules)
+            foreach (Command command in this.Modules)
             {
                 var message = this.SplitMessage(command, playerChatEvent.Message);
 
@@ -120,11 +87,10 @@ namespace CommandFramework.Managers.Models
                     continue;
                 }
 
-                var prefix = GetPrefix(command, playerChatEvent)
-                    ?? GetPrefix(this, playerChatEvent)
-                    ?? GetPrefix(Defaults, playerChatEvent);
-
-                prefix = new HashSet<string>(prefix.Where(ValidPrefix));
+                var prefix = (GetPrefixCommonDenom(command, playerChatEvent)
+                    ?? GetPrefixCommonDenom(this, playerChatEvent)
+                    ?? GetPrefixCommonDenom(DefaultHandler, playerChatEvent))
+                    .Where(ValidPrefix).ToHashSet();
 
                 if (prefix.Count <= 0)
                 {
@@ -138,7 +104,7 @@ namespace CommandFramework.Managers.Models
                     continue;
                 }
 
-                List<(string Alias, bool CaseSens)> aliases = this.GetAliases(command).ToList();
+                List<(string Alias, bool CaseSens)> aliases = this.GetCombinedAliases(command).ToList();
 
                 if (aliases.Count <= 0)
                 {
@@ -151,7 +117,10 @@ namespace CommandFramework.Managers.Models
                 {
                     foreach (var (alias, caseSens) in aliases)
                     {
-                        combined.Add((p + alias, caseSens));
+                        if (exludedAliases.All(((string, bool) excluded) => excluded != (alias, caseSens)))
+                        {
+                            combined.Add((p + alias, caseSens));
+                        }
                     }
                 }
 
@@ -164,58 +133,41 @@ namespace CommandFramework.Managers.Models
             return null;
         }
 
-        private (string Alias, bool CaseSensitive)[] GetAliases(Command command)
+        /// <inheritdoc/>
+        public (string Alias, bool CaseSensitive)[] GetCombinedAliases(Command command)
         {
             return command.Aliases == null
                 ? new[]
                 {
                     (command.MainCommand, command.CaseSensitive
                         ?? this.CaseSensitive
-                        ?? Defaults.CaseSensitive
+                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
                         ?? false),
                 }
                 : command.Aliases.Concat(new[]
                 {
                     (command.MainCommand, command.CaseSensitive
                         ?? this.CaseSensitive
-                        ?? Defaults.CaseSensitive
+                        ?? CommandHandlerUtil.DefaultHandler.CaseSensitive
                         ?? false),
                 }).ToArray();
         }
 
-        private static bool ValidPrefix(string prefix) => !string.IsNullOrWhiteSpace(prefix);
+        // Class events.
 
-        private static HashSet<string> GetPrefix(IOptions options, IPlayerChatEvent chatEvent)
+        /// <inheritdoc/>
+        public virtual void Before(string message)
         {
-            if (!string.IsNullOrWhiteSpace(options.PrefixS))
-            {
-                return new HashSet<string>() { options.PrefixS };
-            }
-
-            if (options.PrefixSA != null && options.PrefixSA.Count > 0)
-            {
-                return options.PrefixSA;
-            }
-
-            if (options.PrefixFS != null && options.PrefixFS(chatEvent) is string tempStr)
-            {
-                return new HashSet<string>() { tempStr };
-            }
-
-            if (options.PrefixFSA != null && options.PrefixFSA(chatEvent) is HashSet<string> tempStrArray)
-            {
-                return tempStrArray;
-            }
-
-            return null;
         }
 
-        public virtual void Before(string message) { }
+        /// <inheritdoc/>
+        public virtual void After(string message)
+        {
+        }
 
-        /// <summary>
-        ///     Registers and loads command modules using a path.
-        /// </summary>
-        /// <param name="filePath"> The filepath to the module you want to Load. </param>
+        // Module loaders.
+
+        /// <inheritdoc/>
         public void LoadModulesFromDLL(string filePath)
         {
             // this.Logger.LogInformation("Register Hit");
@@ -250,7 +202,7 @@ namespace CommandFramework.Managers.Models
 
                 try
                 {
-                    this.modules.Add((Command)Activator.CreateInstance(type: type, args: new[] { this }));
+                    this.Modules.Add((Command)Activator.CreateInstance(type: type, args: new[] { this }));
                 }
                 catch
                 {
@@ -261,16 +213,10 @@ namespace CommandFramework.Managers.Models
             }
         }
 
-        /// <summary>
-        ///     Loads modules.
-        /// </summary>
-        /// <param name="command"> The Command you want to load.</param>
-        public void LoadModule(Command command) => this.modules.Add(command);
+        /// <inheritdoc/>
+        public void LoadModule(Command command) => this.Modules.Add(command);
 
-        /// <summary>
-        ///     Loads multiple modules.
-        /// </summary>
-        /// <param name="commands"> The commands you want to load.</param>
-        public void LoadModules(Command[] commands) => this.modules.AddRange(commands);
+        /// <inheritdoc/>
+        public void LoadModules(Command[] commands) => this.Modules.AddRange(commands);
     }
 }

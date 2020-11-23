@@ -23,5 +23,6 @@ namespace CommandFramework.Managers.Models
         ///     Gets or Sets the command arguments.
         /// </summary>
         public ArgumentGenerator Args { get; set; }
+        object Prefix { get; }
     }
 }

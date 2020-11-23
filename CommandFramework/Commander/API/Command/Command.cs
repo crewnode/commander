@@ -16,7 +16,7 @@ namespace CommandFramework.Managers.Models
     /// <remarks>
     ///     Extends <see cref="CommandOptions"/>.
     /// </remarks>
-    public abstract class Command : CommandOptions
+    public class Command : CommandOptions, ICommand
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Command"/> class.
@@ -36,46 +36,19 @@ namespace CommandFramework.Managers.Models
             this.Set(commandOptions);
         }
 
-        /// <summary>
-        ///     Gets the main command alias.
-        /// </summary>
+        /// <inheritdoc/>
         public string MainCommand { get; }
 
-        /// <summary>
-        ///     Gets the handler that the <see cref="Command"/> uses.
-        /// </summary>
+        
         public HandlerOptions Handler { get; private set; } // Not sure how to improve this sadly
 
-        /// <summary>
-        ///     Generates a <see cref="ArgumentGenerator"/> for each phrase.
-        /// </summary>
-        /// <remarks>
-        ///     Overwrites this.Args if used.
-        /// </remarks>
-        /// <param name="message">The message actually sent.</param>
-        /// <param name="playerChatEvent">The player chat event.</param>
-        /// <returns>A IEnumerable of ArgumentGenerators.</returns>
+        
         public virtual IEnumerable<ArgumentGenerator> Arguments(IPlayerChatEvent playerChatEvent) => new[] { this.Args };
 
-        /// <summary>
-        ///     Runs before the <see cref="Arguments(string, IPlayerChatEvent)"/> gets called.
-        /// </summary>
-        /// <remarks>
-        ///     Use this if you want to make changes to the actual message before it gets ran through <see cref="Arguments(string, IPlayerChatEvent)"/>. Setting this to an empty string will cancel the command.
-        /// </remarks>
-        /// <param name="playerChatEvent">The player chat event.</param>
-        /// <returns>Returns an updated message or the same message.</returns>
+        
         public virtual void Before(IPlayerChatEvent playerChatEvent) { }
 
-        /// <summary>
-        ///     Executes after gathering the arguments.
-        /// </summary>
-        ///
-        /// <remarks>
-        ///     This is where you should put the main code of the command, this gets called after <see cref="Before(IPlayerChatEvent)"/> and <see cref="Arguments(string, IPlayerChatEvent)"/> .
-        /// </remarks>
-        /// <param name="playerChatEvent">The player chat event.</param>
-        /// <param name="arguments">The arguments passed from <see cref="Arguments(string, IPlayerChatEvent)"/>.</param>
+        
         public virtual void Execute(IPlayerChatEvent playerChatEvent, object[] arguments)
         {
             return;
