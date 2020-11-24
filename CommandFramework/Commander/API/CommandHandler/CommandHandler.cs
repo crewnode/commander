@@ -6,11 +6,17 @@ namespace CommandFramework.Managers.Models
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.Tracing;
     using System.Linq;
     using System.Reflection;
+    using System.Runtime.InteropServices;
+    using CommandFramework.API;
     using CommandFramework.API.CommandHandler;
+    using CommandFramework.API.Enums;
+    using CommandFramework.API.Models;
     using Impostor.Api.Events.Player;
     using Microsoft.Extensions.Logging;
+    using Microsoft.VisualBasic.CompilerServices;
     using static CommandFramework.API.CommandHandler.CommandHandlerUtil;
 
     /// <summary>
@@ -26,6 +32,7 @@ namespace CommandFramework.Managers.Models
         {
             this.Set(options);
             this.Modules = new List<Command>();
+            this.IncompleteArguments = new List<IInvalidArgument>();
         }
 
         // Module loaders.
@@ -37,6 +44,11 @@ namespace CommandFramework.Managers.Models
         ///     This holds any modules loaded through <see cref="LoadModules(Command[])"/> or <see cref="LoadModulesFromDLL(string)"/>.
         /// </remarks>
         public List<Command> Modules { get; private set; }
+
+        /// <summary>
+        ///     Gets a list of the incomplete arguments.
+        /// </summary>
+        public List<IInvalidArgument> IncompleteArguments { get; private set; }
 
         /// <inheritdoc/>
         public void LoadModulesFromDLL(string filePath)
@@ -84,10 +96,10 @@ namespace CommandFramework.Managers.Models
         }
 
         /// <inheritdoc/>
-        public void LoadModule(Command command) { this.Modules.Add(command); }
+        public void LoadModule(Command command) => this.Modules.Add(command);
 
         /// <inheritdoc/>
-        public void LoadModules(Command[] commands) { this.Modules.AddRange(commands); }
+        public void LoadModules(Command[] commands) => this.Modules.AddRange(commands);
 
         // Data conversions.
 
@@ -151,6 +163,25 @@ namespace CommandFramework.Managers.Models
 
             var associatedCommand = this.FindCommand(eventInfo);
 
+            var matchingIncompleteCommands = this.IncompleteArguments.Where((inArg) => inArg.ClientID == eventInfo.ClientPlayer.Client.Id);
+
+            if (associatedCommand == null && matchingIncompleteCommands.Count() > 0)
+            {
+                var commandArg = matchingIncompleteCommands.ElementAt(0);
+
+                if (!this.MatchType(commandArg.Phrase.Current, commandArg.PhraseArgs.Current))
+                {
+                    // Run phrase
+                    return;
+                }
+                else
+                {
+                    // Run phrase again and return.
+                    // Or run execute the command from FindCommand or using a stored version.
+                    return;
+                }
+            }
+
             if (associatedCommand == null)
             {
                 return;
@@ -169,8 +200,55 @@ namespace CommandFramework.Managers.Models
 
             while (phrases.MoveNext() & commandArgs.MoveNext())
             {
-                commandArgs.Current.
+                if (!this.MatchType(phrases.Current, commandArgs.Current))
+                {
+                    // Run phrase
+
+                    this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, phrases, commandArgs, 0));
+
+                    return;
+                }
             }
+
+            // Check if there was too many arguments for the command or too little.
+        }
+
+        public bool TryMatchType(IPlayerChatEvent chatEvent, ArgumentGenerator argument, out object value)
+        {
+            if (string.IsNullOrEmpty(chatEvent.Message))
+            {
+                value = null;
+                return false;
+            }
+
+            value = null;
+            bool successfulMatch = true;
+
+            foreach (Enum flag in Enum.GetValues(typeof(AutoTypes)))
+            {
+                if (argument.AutoType.HasValue && argument.AutoType.Value.HasFlag(flag))
+                {
+                    switch (argument.AutoType)
+                    {
+                        case AutoTypes.Integer:
+                            successfulMatch = int.TryParse(chatEvent.Message, out int tempInt);
+                            value = tempInt;
+                            break;
+
+                        case AutoTypes.LongInteger:
+                            successfulMatch = int.TryParse(chatEvent.Message, out int tempLong);
+                            value = tempLong;
+                            break;
+
+                        case AutoTypes.String:
+                            value = chatEvent;
+                            successfulMatch = true;
+                            break;
+                    }
+                }
+            }
+
+            return successfulMatch && (argument?.ManualType(chatEvent, out value) ?? successfulMatch);
         }
 
         // Command handling here.

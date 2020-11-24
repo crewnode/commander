@@ -4,23 +4,15 @@
 
 namespace CommandFramework.Managers.Models
 {
+    using System;
     using CommandFramework.API.Enums;
+    using Impostor.Api.Events.Player;
 
     /// <summary>
     ///     Holds all the data that pertains to the <see cref="IArguments"/> class.
     /// </summary>
     public interface IArguments
     {
-        /// <summary>
-        ///     Gets the command this argument belongs to.
-        /// </summary>
-        public string Command { get; }
-
-        /// <summary>
-        ///     Gets the command handler.
-        /// </summary>
-        public HandlerOptions Handler { get; }
-
         /// <summary>
         ///     Gets or Sets the default argument value.
         /// </summary>
@@ -45,8 +37,16 @@ namespace CommandFramework.Managers.Models
         ///     Gets or sets the auto type.
         /// </summary>
         /// <remarks>
-        ///     Setting an auto type will work with validate. Multiple autotypes are allowed.
+        ///     Setting an auto type will work with manualType. Multiple autotypes are allowed.
         /// </remarks>
         public AutoTypes? AutoType { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the manual type.
+        /// </summary>
+        /// <remarks>
+        ///     WIP.
+        /// </remarks>
+        public Func<IPlayerChatEvent, bool?> ManualType { get; set; }
     }
 }

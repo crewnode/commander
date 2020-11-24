@@ -5,6 +5,8 @@
 namespace CommandFramework.Managers.Models
 {
     using CommandFramework.API.Enums;
+    using Impostor.Api.Events.Player;
+    using System;
 
     /// <summary>
     ///     Represents an argument for a command.
@@ -14,23 +16,6 @@ namespace CommandFramework.Managers.Models
     /// </remarks>
     public class ArgumentGenerator : IArguments
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="ArgumentGenerator"/> class.
-        /// </summary>
-        /// <param name="comamnd"> The main command alias.</param>
-        /// <param name="handler"> The command handler attached to the Command.</param>
-        public ArgumentGenerator(string comamnd, HandlerOptions handler)
-        {
-            this.Command = comamnd;
-            this.Handler = handler;
-        }
-
-        /// <inheritdoc/>
-        public string Command { get; }
-
-        /// <inheritdoc/>
-        public HandlerOptions Handler { get; }
-
         /// <inheritdoc/>
         public string Default { get; set; }
 
@@ -45,5 +30,8 @@ namespace CommandFramework.Managers.Models
 
         /// <inheritdoc/>
         public AutoTypes? AutoType { get; set; }
+
+        /// <inheritdoc/>
+        public Func<IPlayerChatEvent, bool?> ManualType { get; set; }
     }
 }

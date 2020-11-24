@@ -48,6 +48,14 @@ namespace CommandFramework.Managers.Models
         /// <returns> A split string.</returns>
         public string[] SplitMessage(Command associatedCommand, string message);
 
+        /// <summary>
+        ///     Gets the duplicated aliases.
+        /// </summary>
+        /// <returns>
+        ///     An array of all the duplicated aliases.
+        /// </returns>
+        public (string Alias, bool CaseSensitive)[] GetDuplicatedAliases();
+
         // Handler events.
 
         /// <summary>
