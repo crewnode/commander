@@ -5,8 +5,6 @@
 namespace CommandFramework.Managers.Models
 {
     using CommandFramework.API.Enums;
-    using Impostor.Api.Events.Player;
-    using System;
 
     /// <summary>
     ///     Represents an argument for a command.
@@ -14,7 +12,7 @@ namespace CommandFramework.Managers.Models
     /// <remarks>
     ///     Implements <see cref="IArguments"/>.
     /// </remarks>
-    public class ArgumentGenerator : IArguments
+    public class ArgumentGenerator : IArguments // Might make more sense as a structure rather then a class.
     {
         /// <inheritdoc/>
         public string Default { get; set; }
@@ -32,6 +30,6 @@ namespace CommandFramework.Managers.Models
         public AutoTypes? AutoType { get; set; }
 
         /// <inheritdoc/>
-        public Func<IPlayerChatEvent, bool?> ManualType { get; set; }
+        public ManualTypeDelegate ManualType { get; set; }
     }
 }

@@ -17,13 +17,15 @@ namespace CommandFramework.API
         /// Initializes a new instance of the <see cref="InvalidArgument"/> class.
         /// </summary>
         /// <param name="clientID"> The client Id of the player who sent the original message. </param>
-        /// <param name="phrase"> The original phrase. </param>
+        /// <param name="command"> The command associated to the invalid argument. </param>
+        /// <param name="objs"> The already calculated objects. </param>
         /// <param name="phraseArgs"> The original phrase args. </param>
         /// <param name="timeOut"> The time when the comand should end.</param>
-        public InvalidArgument(int? clientID, IEnumerator<string> phrase, IEnumerator<ArgumentGenerator> phraseArgs, long? timeOut)
+        public InvalidArgument(int? clientID, Command command, List<object> objs, IEnumerator<ArgumentGenerator> phraseArgs, long? timeOut)
         {
             this.ClientID = clientID;
-            this.Phrase = phrase;
+            this.AssociatedCommand = command;
+            this.SavedObjs = objs;
             this.PhraseArgs = phraseArgs;
             this.TimeOut = timeOut;
         }
@@ -32,10 +34,16 @@ namespace CommandFramework.API
         public int? ClientID { get; }
 
         /// <inheritdoc/>
-        public IEnumerator<string> Phrase { get; set; }
+        public Command AssociatedCommand { get; }
+
+        /// <inheritdoc/>
+        public List<object> SavedObjs { get; set; }
 
         /// <inheritdoc/>
         public IEnumerator<ArgumentGenerator> PhraseArgs { get; }
+
+        /// <inheritdoc/>
+        public int RetryCount { get; set; } = 0;
 
         /// <inheritdoc/>
         public long? TimeOut { get; set; }

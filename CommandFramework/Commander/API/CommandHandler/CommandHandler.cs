@@ -6,6 +6,7 @@ namespace CommandFramework.Managers.Models
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.Diagnostics.Tracing;
     using System.Linq;
     using System.Reflection;
@@ -167,19 +168,35 @@ namespace CommandFramework.Managers.Models
 
             if (associatedCommand == null && matchingIncompleteCommands.Count() > 0)
             {
-                var commandArg = matchingIncompleteCommands.ElementAt(0);
+                var incompleObj = this.IncompleteArguments[0];
+                var phraseArg = incompleObj.PhraseArgs.Current;
 
-                if (!this.MatchType(commandArg.Phrase.Current, commandArg.PhraseArgs.Current))
+                if (!this.TryMatchAutoType(eventInfo.Message, phraseArg.AutoType, out object obj) && !this.TryMatchManualType(eventInfo.Message, phraseArg, out obj))
                 {
-                    // Run phrase
+                    eventInfo.ClientPlayer.Character.SendChatAsync(phraseArg.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry); // Default message?
+                    incompleObj.RetryCount++;
                     return;
+                }
+
+                if (obj == null)
+                {
+                    return;
+                }
+
+                incompleObj.PhraseArgs.MoveNext();
+
+                incompleObj.SavedObjs.Add(obj);
+
+                if (incompleObj.PhraseArgs == null)
+                {
+                    associatedCommand.Execute(eventInfo, incompleObj.SavedObjs.ToArray());
                 }
                 else
                 {
-                    // Run phrase again and return.
-                    // Or run execute the command from FindCommand or using a stored version.
-                    return;
+                    eventInfo.ClientPlayer.Character.SendChatAsync(incompleObj.PhraseArgs.Current.Prompt.Start ?? associatedCommand.PromptOpts.Start ?? this.PromptOpts.Start); // Give a default later.
                 }
+
+                return;
             }
 
             if (associatedCommand == null)
@@ -196,26 +213,72 @@ namespace CommandFramework.Managers.Models
             }
 
             var phrases = splitCommand.AsEnumerable().GetEnumerator();
-            var commandArgs = associatedCommand.GetArgs(eventInfo).GetEnumerator();
+            var commandArgsEnumerable = associatedCommand.GetArgs(eventInfo);
 
-            while (phrases.MoveNext() & commandArgs.MoveNext())
+            if (commandArgsEnumerable == null)
             {
-                if (!this.MatchType(phrases.Current, commandArgs.Current))
+                associatedCommand.Execute(eventInfo, splitCommand);
+                return;
+            }
+
+            var commandArgs = commandArgsEnumerable.GetEnumerator();
+
+            List<object> objArray = new List<object>();
+            phrases.MoveNext();
+            while (phrases.MoveNext() is bool phraseAlive & commandArgs.MoveNext() is bool argsAlive && phraseAlive && argsAlive)
+            {
+                if (!this.TryMatchAutoType(phrases.Current, commandArgs.Current.AutoType, out object obj) && !this.TryMatchManualType(phrases.Current, commandArgs.Current, out obj))
                 {
-                    // Run phrase
+                    eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry);
 
-                    this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, phrases, commandArgs, 0));
+                    this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
+                    continue;
+                }
 
+                if (obj == null)
+                {
                     return;
                 }
+
+                objArray.Add(obj);
+            }
+
+            var test = phrases;
+
+            var test1 = test == null;
+
+            if (phrases.Current == null && commandArgs.Current == null)
+            {
+                associatedCommand.Execute(eventInfo, objArray.ToArray());
+            }
+            else if (phrases.Current == null)
+            {
+                eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Start ?? associatedCommand.PromptOpts.Start ?? this.PromptOpts.Start); // Give a default later.
+            }
+            else
+            {
+                eventInfo.ClientPlayer.Character.SendChatAsync("Too many given arguments..."); // Give a default later.
             }
 
             // Check if there was too many arguments for the command or too little.
         }
 
-        public bool TryMatchType(IPlayerChatEvent chatEvent, ArgumentGenerator argument, out object value)
+        private void RunRetryMessage(string retry)
         {
-            if (string.IsNullOrEmpty(chatEvent.Message))
+            throw new NotImplementedException();
+        }
+
+        public bool TryMatchManualType(string phrase, ArgumentGenerator argument, out object value)
+        {
+            value = null;
+            if (argument.ManualType == null)
+                return false;
+            return argument?.ManualType(phrase, out value) ?? false;
+        }
+
+        public bool TryMatchAutoType(string phrase, AutoTypes? autoType, out object value)
+        {
+            if (string.IsNullOrEmpty(phrase))
             {
                 value = null;
                 return false;
@@ -226,29 +289,34 @@ namespace CommandFramework.Managers.Models
 
             foreach (Enum flag in Enum.GetValues(typeof(AutoTypes)))
             {
-                if (argument.AutoType.HasValue && argument.AutoType.Value.HasFlag(flag))
+                if (autoType.HasValue && autoType.Value.HasFlag(flag))
                 {
-                    switch (argument.AutoType)
+                    switch (flag)
                     {
                         case AutoTypes.Integer:
-                            successfulMatch = int.TryParse(chatEvent.Message, out int tempInt);
+                            int tempInt = 0;
+                            successfulMatch = successfulMatch && int.TryParse(phrase, out tempInt);
                             value = tempInt;
                             break;
 
                         case AutoTypes.LongInteger:
-                            successfulMatch = int.TryParse(chatEvent.Message, out int tempLong);
+                            long tempLong = 0;
+                            successfulMatch = successfulMatch && long.TryParse(phrase, out tempLong);
                             value = tempLong;
                             break;
 
                         case AutoTypes.String:
-                            value = chatEvent;
-                            successfulMatch = true;
+                            value = phrase;
+                            break;
+
+                        default:
+                            successfulMatch = false;
                             break;
                     }
                 }
             }
 
-            return successfulMatch && (argument?.ManualType(chatEvent, out value) ?? successfulMatch);
+            return successfulMatch; // Will overwrite other values with last value.
         }
 
         // Command handling here.

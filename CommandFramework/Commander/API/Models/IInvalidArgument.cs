@@ -21,14 +21,24 @@ namespace CommandFramework.API.Models
         public int? ClientID { get; }
 
         /// <summary>
-        ///     Gets or sets the phrase enumerator from the original command.
+        ///     Gets the associated command.
         /// </summary>
-        public IEnumerator<string> Phrase { get; set; }
+        public Command AssociatedCommand { get; }
+
+        /// <summary>
+        ///     Gets or sets the saved objects.
+        /// </summary>
+        public List<object> SavedObjs { get; set; }
 
         /// <summary>
         /// Gets the phrase arguments.
         /// </summary>
         public IEnumerator<ArgumentGenerator> PhraseArgs { get; }
+
+        /// <summary>
+        ///     Gets or sets the current retry count.
+        /// </summary>
+        public int RetryCount { get; set; }
 
         /// <summary>
         ///     Gets or sets the command timeout.
