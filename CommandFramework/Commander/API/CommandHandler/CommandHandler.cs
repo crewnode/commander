@@ -168,7 +168,7 @@ namespace CommandFramework.Managers.Models
 
             if (associatedCommand == null && matchingIncompleteCommands.Count() > 0)
             {
-                this.CompleteInvalidCommand(eventInfo, associatedCommand);
+                this.CompleteInvalidCommand(eventInfo, matchingIncompleteCommands.ElementAt(0));
                 return;
             }
 
@@ -177,7 +177,7 @@ namespace CommandFramework.Managers.Models
                 return;
             }
 
-            if (matchingIncompleteCommands.Count() > 1)
+            if (matchingIncompleteCommands.Count() > 0)
             {
                 this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
             }
@@ -195,6 +195,7 @@ namespace CommandFramework.Managers.Models
 
             if (commandArgsEnumerable == null)
             {
+                // If no args were given, use the split command as the args.
                 associatedCommand.Execute(eventInfo, splitCommand);
                 return;
             }
@@ -216,7 +217,15 @@ namespace CommandFramework.Managers.Models
 
             while (Iterate())
             {
-                object obj = NewMethod(eventInfo, associatedCommand, phrases, commandArgs, objArray);
+                var matchAuto = commandArgs.Current.AutoType == null || this.TryMatchAutoType(phrases.Current, commandArgs.Current.AutoType, out object obj);
+                var matchManual = this.TryMatchManualType(phrases.Current, commandArgs.Current, out obj);
+
+                if (!matchAuto || !matchManual)
+                {
+                    eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry);
+                    this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
+                    return;
+                }
 
                 objArray.Add(obj ?? phrases.Current);
             }
@@ -228,33 +237,15 @@ namespace CommandFramework.Managers.Models
             else if (!phraseMoveNext)
             {
                 eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Start ?? associatedCommand.PromptOpts.Start ?? this.PromptOpts.Start); // Give a default later.
-                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
                 this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
             }
             else
             {
                 eventInfo.ClientPlayer.Character.SendChatAsync("Too many given arguments..."); // Give a default later.
             }
-
-            // Check if there was too many arguments for the command or too little.
         }
 
-        private object NewMethod(IPlayerChatEvent eventInfo, Command associatedCommand, IEnumerator<string> phrases, IEnumerator<ArgumentGenerator> commandArgs, List<object> objArray)
-        {
-            var matchAuto = commandArgs.Current.AutoType == null || this.TryMatchAutoType(phrases.Current, commandArgs.Current.AutoType, out object obj);
-            var matchManual = this.TryMatchManualType(phrases.Current, commandArgs.Current, out obj);
-
-            if (!matchAuto || !matchManual)
-            {
-                eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry);
-                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
-                this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
-            }
-
-            return obj;
-        }
-
-        private void CompleteInvalidCommand(IPlayerChatEvent eventInfo, Command associatedCommand)
+        private void CompleteInvalidCommand(IPlayerChatEvent eventInfo, IInvalidArgument invalidArgument)
         {
             var incompleObj = this.IncompleteArguments[0];
             var phraseArg = incompleObj.PhraseArgs.Current;
@@ -264,7 +255,7 @@ namespace CommandFramework.Managers.Models
 
             if (!matchAuto || !matchManual)
             {
-                this.SendRetryMessage(eventInfo, phraseArg.Prompt.Retry, associatedCommand.PromptOpts.Retry); // Default message?
+                this.SendRetryMessage(eventInfo, phraseArg.Prompt.Retry, invalidArgument.AssociatedCommand.PromptOpts.Retry); // Default message?
                 incompleObj.RetryCount++;
                 return;
             }
@@ -278,7 +269,7 @@ namespace CommandFramework.Managers.Models
                 return;
             }
 
-            this.SendStartMessage(eventInfo, incompleObj.PhraseArgs.Current.Prompt.Start, associatedCommand.PromptOpts.Start); // Give a default later.
+            this.SendStartMessage(eventInfo, incompleObj.PhraseArgs.Current.Prompt.Start, invalidArgument.AssociatedCommand.PromptOpts.Start); // Give a default later.
         }
 
         private void SendStartMessage(IPlayerChatEvent eventInfo, string argPhraseStartString, string commandStartString)
