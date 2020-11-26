@@ -168,40 +168,18 @@ namespace CommandFramework.Managers.Models
 
             if (associatedCommand == null && matchingIncompleteCommands.Count() > 0)
             {
-                var incompleObj = this.IncompleteArguments[0];
-                var phraseArg = incompleObj.PhraseArgs.Current;
-
-                if (!this.TryMatchAutoType(eventInfo.Message, phraseArg.AutoType, out object obj) && !this.TryMatchManualType(eventInfo.Message, phraseArg, out obj))
-                {
-                    eventInfo.ClientPlayer.Character.SendChatAsync(phraseArg.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry); // Default message?
-                    incompleObj.RetryCount++;
-                    return;
-                }
-
-                if (obj == null)
-                {
-                    return;
-                }
-
-                incompleObj.PhraseArgs.MoveNext();
-
-                incompleObj.SavedObjs.Add(obj);
-
-                if (incompleObj.PhraseArgs == null)
-                {
-                    associatedCommand.Execute(eventInfo, incompleObj.SavedObjs.ToArray());
-                }
-                else
-                {
-                    eventInfo.ClientPlayer.Character.SendChatAsync(incompleObj.PhraseArgs.Current.Prompt.Start ?? associatedCommand.PromptOpts.Start ?? this.PromptOpts.Start); // Give a default later.
-                }
-
+                this.CompleteInvalidCommand(eventInfo, associatedCommand);
                 return;
             }
 
             if (associatedCommand == null)
             {
                 return;
+            }
+
+            if (matchingIncompleteCommands.Count() > 1)
+            {
+                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
             }
 
             associatedCommand.Before(eventInfo);
@@ -225,35 +203,33 @@ namespace CommandFramework.Managers.Models
 
             List<object> objArray = new List<object>();
             phrases.MoveNext();
-            while (phrases.MoveNext() is bool phraseAlive & commandArgs.MoveNext() is bool argsAlive && phraseAlive && argsAlive)
+
+            bool phraseMoveNext, commandMoveNext;
+
+            bool Iterate()
             {
-                if (!this.TryMatchAutoType(phrases.Current, commandArgs.Current.AutoType, out object obj) && !this.TryMatchManualType(phrases.Current, commandArgs.Current, out obj))
-                {
-                    eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry);
+                phraseMoveNext = phrases.MoveNext();
+                commandMoveNext = commandArgs.MoveNext();
 
-                    this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
-                    continue;
-                }
-
-                if (obj == null)
-                {
-                    return;
-                }
-
-                objArray.Add(obj);
+                return phraseMoveNext && commandMoveNext;
             }
 
-            var test = phrases;
+            while (Iterate())
+            {
+                object obj = NewMethod(eventInfo, associatedCommand, phrases, commandArgs, objArray);
 
-            var test1 = test == null;
+                objArray.Add(obj ?? phrases.Current);
+            }
 
-            if (phrases.Current == null && commandArgs.Current == null)
+            if (!phraseMoveNext && !commandMoveNext)
             {
                 associatedCommand.Execute(eventInfo, objArray.ToArray());
             }
-            else if (phrases.Current == null)
+            else if (!phraseMoveNext)
             {
                 eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Start ?? associatedCommand.PromptOpts.Start ?? this.PromptOpts.Start); // Give a default later.
+                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
+                this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
             }
             else
             {
@@ -263,17 +239,62 @@ namespace CommandFramework.Managers.Models
             // Check if there was too many arguments for the command or too little.
         }
 
-        private void RunRetryMessage(string retry)
+        private object NewMethod(IPlayerChatEvent eventInfo, Command associatedCommand, IEnumerator<string> phrases, IEnumerator<ArgumentGenerator> commandArgs, List<object> objArray)
         {
-            throw new NotImplementedException();
+            var matchAuto = commandArgs.Current.AutoType == null || this.TryMatchAutoType(phrases.Current, commandArgs.Current.AutoType, out object obj);
+            var matchManual = this.TryMatchManualType(phrases.Current, commandArgs.Current, out obj);
+
+            if (!matchAuto || !matchManual)
+            {
+                eventInfo.ClientPlayer.Character.SendChatAsync(commandArgs.Current.Prompt.Retry ?? associatedCommand.PromptOpts.Retry ?? this.PromptOpts.Retry);
+                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
+                this.IncompleteArguments.Add(new InvalidArgument(eventInfo.ClientPlayer.Client.Id, associatedCommand, objArray, commandArgs, 0));
+            }
+
+            return obj;
+        }
+
+        private void CompleteInvalidCommand(IPlayerChatEvent eventInfo, Command associatedCommand)
+        {
+            var incompleObj = this.IncompleteArguments[0];
+            var phraseArg = incompleObj.PhraseArgs.Current;
+
+            var matchAuto = phraseArg.AutoType == null || this.TryMatchAutoType(eventInfo.Message, phraseArg.AutoType, out object obj);
+            var matchManual = this.TryMatchManualType(eventInfo.Message, phraseArg, out obj);
+
+            if (!matchAuto || !matchManual)
+            {
+                this.SendRetryMessage(eventInfo, phraseArg.Prompt.Retry, associatedCommand.PromptOpts.Retry); // Default message?
+                incompleObj.RetryCount++;
+                return;
+            }
+
+            incompleObj.SavedObjs.Add(obj ?? eventInfo.Message);
+
+            if (!incompleObj.PhraseArgs.MoveNext())
+            {
+                incompleObj.AssociatedCommand.Execute(eventInfo, incompleObj.SavedObjs.ToArray());
+                this.IncompleteArguments = this.IncompleteArguments.Where((inArg) => inArg.ClientID != eventInfo.ClientPlayer.Client.Id).ToList();
+                return;
+            }
+
+            this.SendStartMessage(eventInfo, incompleObj.PhraseArgs.Current.Prompt.Start, associatedCommand.PromptOpts.Start); // Give a default later.
+        }
+
+        private void SendStartMessage(IPlayerChatEvent eventInfo, string argPhraseStartString, string commandStartString)
+        {
+            eventInfo.ClientPlayer.Character.SendChatAsync(argPhraseStartString ?? commandStartString ?? this.PromptOpts.Start);
+        }
+
+        private void SendRetryMessage(IPlayerChatEvent eventInfo, string argPhraseStartString, string commandStartString)
+        {
+            eventInfo.ClientPlayer.Character.SendChatAsync(argPhraseStartString ?? commandStartString ?? this.PromptOpts.Start);
         }
 
         public bool TryMatchManualType(string phrase, ArgumentGenerator argument, out object value)
         {
-            value = null;
-            if (argument.ManualType == null)
-                return false;
-            return argument?.ManualType(phrase, out value) ?? false;
+            value = argument.ManualType?.Invoke(phrase);
+            return value != null;
         }
 
         public bool TryMatchAutoType(string phrase, AutoTypes? autoType, out object value)

@@ -9,14 +9,6 @@ namespace CommandFramework.Managers.Models
     using Impostor.Api.Events.Player;
 
     /// <summary>
-    ///     Custom delegate to take in a chat event, and return a bool/ out the object you want to pass on.
-    /// </summary>
-    /// <param name="phrase"> The phrase to parse.</param>
-    /// <param name="passOnValue"> The value you want to pass on.</param>
-    /// <returns> A value indicating whether the method was successful.</returns>
-    public delegate bool ManualTypeDelegate(string phrase, out object passOnValue);
-
-    /// <summary>
     ///     Holds all the data that pertains to the <see cref="IArguments"/> class.
     /// </summary>
     public interface IArguments
@@ -55,6 +47,6 @@ namespace CommandFramework.Managers.Models
         /// <remarks>
         ///     Returns a boolean whether the manualType was successfully matched, and then a out object of the successfully casted object.
         /// </remarks>
-        public ManualTypeDelegate ManualType { get; set; }
+        public Func<string, object> ManualType { get; set; }
     }
 }

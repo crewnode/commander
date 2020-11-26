@@ -4,6 +4,7 @@
 
 namespace CommandFramework.Managers.Models
 {
+    using System;
     using CommandFramework.API.Enums;
 
     /// <summary>
@@ -30,6 +31,6 @@ namespace CommandFramework.Managers.Models
         public AutoTypes? AutoType { get; set; }
 
         /// <inheritdoc/>
-        public ManualTypeDelegate ManualType { get; set; }
+        public Func<string, object> ManualType { get; set; }
     }
 }
